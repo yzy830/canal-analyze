@@ -5,7 +5,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 import com.alibaba.otter.canal.common.utils.CanalToStringStyle;
 
 /**
- * 启动的相关配置
+ * 启动的相关配置。采用全局配置+instance配置模式。如果没有instance配置，则使用全局配置
  * 
  * @author jianghang 2012-11-8 下午02:50:54
  * @version 1.0.0
@@ -26,6 +26,10 @@ public class InstanceConfig {
         this.globalConfig = globalConfig;
     }
 
+    /**
+     * 全局配置加载方式
+     *
+     */
     public static enum InstanceMode {
         SPRING, MANAGER;
 
