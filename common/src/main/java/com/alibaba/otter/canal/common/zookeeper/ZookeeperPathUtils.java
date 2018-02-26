@@ -135,6 +135,12 @@ public class ZookeeperPathUtils {
     }
 
     /**
+     * <p>
+     *   yzy: 获取一个指定instance保存正在运行Server地址的目录，otter/canal/destinations/{instance_name}/running
+     * </p>
+     * 
+     * @param destination：instance名称
+     * 
      * 服务端当前正在提供服务的running节点
      */
     public static String getDestinationServerRunning(String destination) {
@@ -148,10 +154,23 @@ public class ZookeeperPathUtils {
         return MessageFormat.format(DESTINATION_CLIENTID_RUNNING_NODE, destination, String.valueOf(clientId));
     }
 
+    /**
+     * 获得Instance对应的集群节点名称，/otter/canal/destinations/{instance_name}/cluster/{ip_address}。
+     * 
+     * @param destination
+     * @param node
+     * @return
+     */
     public static String getDestinationClusterNode(String destination, String node) {
         return MessageFormat.format(DESTINATION_CLUSTER_NODE, destination, node);
     }
 
+    /**
+     * 获得Instance集群节点根目录/otter/canal/destinations/{instance_name}/cluster/
+     * 
+     * @param destination
+     * @return
+     */
     public static String getDestinationClusterRoot(String destination) {
         return MessageFormat.format(DESTINATION_CLUSTER_ROOT, destination);
     }

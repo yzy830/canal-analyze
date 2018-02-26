@@ -137,6 +137,9 @@ public class CanalController {
                     public void processStart() {
                         try {
                             if (zkclientx != null) {
+                                /*
+                                 * 创建/otter/canal/destinations/{instance_name}/cluster/{ip_address}
+                                 * */
                                 final String path = ZookeeperPathUtils.getDestinationClusterNode(destination, ip + ":"
                                                                                                               + port);
                                 initCid(path);
@@ -370,7 +373,7 @@ public class CanalController {
 
     public void start() throws Throwable {
         logger.info("## start the canal server[{}:{}]", ip, port);
-        // 创建整个canal的工作节点
+        // 创建整个canal的工作节点 /otter/canal/cluster/{ip_address}
         final String path = ZookeeperPathUtils.getCanalClusterNode(ip + ":" + port);
         initCid(path);
         if (zkclientx != null) {
@@ -440,6 +443,11 @@ public class CanalController {
         logger.info("## stop the canal server[{}:{}]", ip, port);
     }
 
+    /**
+     * 在指定path创建一个临时节点。如果父节点不存在，则创建父节点(递归创建祖先节点)；如果节点已经存在，不做任何处理
+     * 
+     * @param path
+     */
     private void initCid(String path) {
         // logger.info("## init the canalId = {}", cid);
         // 初始化系统目录
