@@ -93,9 +93,26 @@ public class ServerRunningMonitor extends AbstractCanalLifeCycle {
 
     public void start() {
         super.start();
+        /*
+         * 创建/otter/canal/destinations/{instance_name}/cluster/{ip_address}，标记这个Server参与了这个Instance的服务
+         * */
         processStart();
         if (zkClient != null) {
             // 如果需要尽可能释放instance资源，不需要监听running节点，不然即使stop了这台机器，另一台机器立马会start
+            /*
+             * 监控/otter/canal/destinations/{instance_name}/running节点，以实现高可用。如果dataListener监测到节点丢失，会
+             * 尝试调用initRunning来创建节点。一旦创建成功，就会启动对应的Instance
+             * 
+             * /otter/canal/destinations/{instance_name}/running记录了正在处理这个Instance的服务器，
+             * 其他服务器只能做备份
+             * 
+             * 这里没有处理连接断开的问题。因此，可能导致这样一个BUG，zk session timeout之后，另外一个服务器已经成为了leader，
+             * 但是这个leader的CanalInstance还在执行。从而导致连个服务器拉取同一个DB Server的日志。
+             * 
+             * 这个问题不会影响应用，但是会影响DB Server的性能。如果考虑直接将Canal Client嵌入Canal Server中，则可能导致日志大量重复
+             * 
+             * 需要进一步测试验证
+             * */
             String path = ZookeeperPathUtils.getDestinationServerRunning(destination);
             zkClient.subscribeDataChanges(path, dataListener);
 

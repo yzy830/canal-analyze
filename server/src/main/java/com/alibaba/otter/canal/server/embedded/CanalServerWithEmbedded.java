@@ -58,6 +58,9 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
         return SingletonHolder.CANAL_SERVER_WITH_EMBEDDED;
     }
 
+    /**
+     * 表示CanalServerWithEmbedded已经启动，并且使用CanalInstanceGenerator创建canalInstances集合
+     * */
     public void start() {
         if (!isStart()) {
             super.start();

@@ -298,6 +298,9 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
     // =================== helper method =================
 
     private MysqlConnection buildMysqlConnection(AuthenticationInfo runningInfo) {
+        /*
+         * 如果不是UTF-8编码，这里可能存在问题。需要测试
+         * */
         MysqlConnection connection = new MysqlConnection(runningInfo.getAddress(),
             runningInfo.getUsername(),
             runningInfo.getPassword(),

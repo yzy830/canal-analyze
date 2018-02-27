@@ -54,6 +54,9 @@ public class CanalController {
     private String                                   ip;
     private int                                      port;
     // 默认使用spring的方式载入
+    /**
+     * yzy: 保存每个instance自己的mode、lazy、spring xml配置
+     */
     private Map<String, InstanceConfig>              instanceConfigs;
     private InstanceConfig                           globalInstanceConfig;
     private Map<String, CanalConfigClient>           managerClients;
@@ -79,7 +82,7 @@ public class CanalController {
             }
         });
 
-        // 初始化全局参数设置
+        // 初始化全局参数设置、instanceGenerator
         globalInstanceConfig = initGlobalConfig(properties);
         instanceConfigs = new MapMaker().makeMap();
         // 初始化instance config
@@ -103,6 +106,9 @@ public class CanalController {
         if (StringUtils.isNotEmpty(zkServers)) {
             zkclientx = ZkClientx.getZkClient(zkServers);
             // 初始化系统目录
+            /*
+             * 初始化系统目录/otter/canal/destinations、/otter/canal/cluster
+             * */
             zkclientx.createPersistent(ZookeeperPathUtils.DESTINATION_ROOT_NODE, true);
             zkclientx.createPersistent(ZookeeperPathUtils.CANAL_CLUSTER_ROOT_NODE, true);
         }
@@ -116,6 +122,9 @@ public class CanalController {
                 runningMonitor.setDestination(destination);
                 runningMonitor.setListener(new ServerRunningListener() {
 
+                    /*
+                     * 启动指定的instance
+                     * */
                     public void processActiveEnter() {
                         try {
                             MDC.put(CanalConstants.MDC_DESTINATION, String.valueOf(destination));
@@ -125,6 +134,9 @@ public class CanalController {
                         }
                     }
 
+                    /*
+                     * 停止指定的instance
+                     * */
                     public void processActiveExit() {
                         try {
                             MDC.put(CanalConstants.MDC_DESTINATION, String.valueOf(destination));
@@ -134,6 +146,16 @@ public class CanalController {
                         }
                     }
 
+                    /**
+                     * 启动之前，创建/otter/canal/destinations/{instance_name}/cluster/{ip_address}。如果节点存在，则忽略
+                     * 
+                     * <p>
+                     * yzy: 如果根据这个流程，那么一个server在异常关闭后，立刻重启，则可能无法在cluster下面创建节点。有时间做一个验证
+                     * 
+                     * <p>
+                     * 这个BUG似乎只会带来监控的问题(发现少了一个节点)，不会对日志拉取流程造成影响。因为/otter/canal/destinations/shop/running会记录
+                     * 正在运行的server，client会根据这个节点的信息来连接正确的服务器
+                     * */
                     public void processStart() {
                         try {
                             if (zkclientx != null) {
@@ -159,6 +181,9 @@ public class CanalController {
                         }
                     }
 
+                    /**
+                     * 停止之后，删除/otter/canal/destinations/{instance_name}/cluster/{ip_address}
+                     * */
                     public void processStop() {
                         try {
                             MDC.put(CanalConstants.MDC_DESTINATION, String.valueOf(destination));
@@ -255,6 +280,21 @@ public class CanalController {
         }
     }
 
+    /**
+     * <p>
+     * yzy: 这个方法做了两件事情
+     * <ol>
+     *   <li>从canal.properties中解析出canal.instance.global.mode、lazy、spring.xml等值</li>
+     *   <li>
+     *     创建CanalInstanceGenerator，根据canal.instance.global.mode，反向代理给ManagerCanalInstanceGenerator或者
+     *     SpringCanalInstanceGenerator
+     *   </li>
+     * </ol>
+     * </p>
+     * 
+     * @param properties
+     * @return
+     */
     private InstanceConfig initGlobalConfig(Properties properties) {
         InstanceConfig globalConfig = new InstanceConfig();
         String modeStr = getProperty(properties, CanalConstants.getInstanceModeKey(CanalConstants.GLOBAL_NAME));
@@ -325,6 +365,11 @@ public class CanalController {
         return applicationContext;
     }
 
+    /**
+     * 根据canal.destinations配置，初始化所有instance的InstanceConfig，并记入{@link #instanceConfigs}字段
+     * 
+     * @param properties
+     */
     private void initInstanceConfig(Properties properties) {
         String destinationStr = getProperty(properties, CanalConstants.CANAL_DESTINATIONS);
         String[] destinations = StringUtils.split(destinationStr, CanalConstants.CANAL_DESTINATION_SPLIT);
@@ -340,6 +385,20 @@ public class CanalController {
         }
     }
 
+    /**
+     * <p>
+     *   根据canal.properties，初始化指定instance的InstanceConfig配置。例如canal.instance.shop.mode、canal.instance.shop.lazy、
+     *   canal.instance.shop.spring.xml.
+     * </p> 
+     * 
+     * <p>
+     *   每一个Instance的InstanceConfig内部都维护了globalInstanceConfig。如果一个Instance没有特定的配置，将使用全局配置
+     * </p>
+     * 
+     * @param properties
+     * @param destination
+     * @return
+     */
     private InstanceConfig parseInstanceConfig(Properties properties, String destination) {
         InstanceConfig config = new InstanceConfig(globalInstanceConfig);
         String modeStr = getProperty(properties, CanalConstants.getInstanceModeKey(destination));
@@ -373,7 +432,11 @@ public class CanalController {
 
     public void start() throws Throwable {
         logger.info("## start the canal server[{}:{}]", ip, port);
-        // 创建整个canal的工作节点 /otter/canal/cluster/{ip_address}
+        /*
+         * 创建整个canal的工作节点 /otter/canal/cluster/{ip_address}
+         * 
+         * 这里与ServerRunningMonitor存在一样的问题，如果快速异常重启，可能无法创建节点，影响监控
+         * */
         final String path = ZookeeperPathUtils.getCanalClusterNode(ip + ":" + port);
         initCid(path);
         if (zkclientx != null) {
