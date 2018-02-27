@@ -336,8 +336,35 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
         return endPosition;
     }
 
+    /**
+     * 这个方法是寻找日志开始位点的核心方法。这个方法分为几个步骤
+     * <ol>
+     *   <li>
+     *     从LogPositionManager中拉取。在default-instance.xml配置中，使用FallbackLogPositionManager
+     *     首先从内存拉取，如果内存中没有，则从ZK中拉取。因此，一旦Canal开始工作，并将日志位点写入过ZK（在ACK流程里面），就不会
+     *     再从最新位置拉取，而是从上次消费位置拉取
+     *   </li>
+     *   <li>
+     *     从如果本地、ZK均没有。则使用用户配置，如果也没有用户配置，则使用show master status指令获取最新位点。
+     *     在用户配置中，允许使用时间配置日志位点。这种情况下的处理是比较复杂的，Canal会使用show binlog event limit 1
+     *     查找第一个日志的文件名称，使用show master status获取最后一个日志的文件名称，然后消费这些日志文件中的每个事件，
+     *     获取对应的时间戳，找到一个大于指定时间戳的事件位置
+     *   </li>
+     *   <li>
+     *     如果本地或者ZK有日志位点，则比较LogPosition#LogIdentity中的地址是否相同，如果不同，则mysql发生了主从切换，应该重新
+     *     在新的服务器中寻找日志位点；如果相同，则根据dumpError的次数判断，如果超过门限，则说明后端mysql可能出现了VIP切换。也需要
+     *     重新根据时间寻找位点
+     *   </li>
+     * </ol>
+     * 
+     * @param connection
+     * @return
+     */
     protected EntryPosition findStartPositionInternal(ErosaConnection connection) {
         MysqlConnection mysqlConnection = (MysqlConnection) connection;
+        /*
+         * 在default-instance.xml中，使用的是FallbackLogPositionManager，
+         * */
         LogPosition logPosition = logPositionManager.getLatestIndexBy(destination);
         if (logPosition == null) {// 找不到历史成功记录
             EntryPosition entryPosition = null;
@@ -512,6 +539,16 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
     }
 
     // 根据时间查找binlog位置
+    /**
+     * <p>
+     *   yzy: 使用show master status获取最后一个日志文件的名称，使用show binlog events limit 1获取第一个日志文件
+     *        的名称。从最后一个日志文件开始查找，遇到一个小于指定时间点的日志位置，则退出。
+     * </p>
+     * 
+     * @param mysqlConnection
+     * @param startTimestamp
+     * @return
+     */
     private EntryPosition findByStartTimeStamp(MysqlConnection mysqlConnection, Long startTimestamp) {
         EntryPosition endPosition = findEndPosition(mysqlConnection);
         EntryPosition startPosition = findStartPosition(mysqlConnection);
@@ -589,7 +626,7 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
     }
 
     /**
-     * 查询当前的binlog位置
+     * 查询当前的binlog位置。使用show master status查看最后的日志位点(日志名称和position)
      */
     private EntryPosition findEndPosition(MysqlConnection mysqlConnection) {
         try {
@@ -606,7 +643,7 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
     }
 
     /**
-     * 查询当前的binlog位置
+     * 查询当前的binlog位置。使用show binlog events limit 1查看第一个日志的文件名称和Position
      */
     private EntryPosition findStartPosition(MysqlConnection mysqlConnection) {
         try {

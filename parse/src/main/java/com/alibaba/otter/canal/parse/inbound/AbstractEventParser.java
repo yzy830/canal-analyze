@@ -154,6 +154,11 @@ public abstract class AbstractEventParser<EVENT> extends AbstractCanalLifeCycle 
                         startHeartBeat(erosaConnection);
 
                         // 3. 执行dump前的准备工作
+                        /*
+                         * yzy: 检查BINLOG FORMAT、BINGLOG IMAGE是否满足配置要求
+                         * 
+                         * 获取从tablename到table元数据的映射
+                         * */
                         preDump(erosaConnection);
 
                         erosaConnection.connect();// 链接

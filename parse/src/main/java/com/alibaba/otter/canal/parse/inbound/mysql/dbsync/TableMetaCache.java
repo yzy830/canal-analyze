@@ -20,6 +20,10 @@ import com.google.common.collect.MigrateMap;
 /**
  * 处理table meta解析和缓存
  * 
+ * <p>
+ *   yzy: 建立table id到TableMeta的元数据映射关系
+ * </p>
+ * 
  * @author jianghang 2013-1-17 下午10:15:16
  * @version 1.0.0
  */

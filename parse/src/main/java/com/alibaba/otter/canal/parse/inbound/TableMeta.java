@@ -10,6 +10,11 @@ import com.taobao.tddl.dbsync.binlog.event.TableMapLogEvent;
 /**
  * 描述数据meta对象,mysql binlog中对应的{@linkplain TableMapLogEvent}包含的信息不全
  * 
+ * <p>
+ *   yzy: 在TableMapLogEvent中，没有包含每一列完整的信息。Canal通过desc <table_full_name>获取一个表的完整元数据。
+ *   包括每一列的列明、类型、是否可为空、是否为主键、默认值
+ * </p>
+ * 
  * <pre>
  * 1. 主键信息
  * 2. column name
@@ -56,6 +61,11 @@ public class TableMeta {
         return primarys;
     }
 
+    /**
+     * yzy: 封装了每一列的元数据。使用desc <table_full_name>得到，这些数据来自information_schema.columns表。
+     * 使用desc好处是不需要特殊权限
+     *
+     */
     public static class FieldMeta {
 
         private String columnName;
