@@ -59,6 +59,9 @@ public class ZooKeeperMetaManager extends AbstractCanalLifeCycle implements Cana
         super.stop();
     }
 
+    /**
+     * 创建client节点，记录了filter信息
+     * */
     public void subscribe(ClientIdentity clientIdentity) throws CanalMetaManagerException {
         String path = ZookeeperPathUtils.getClientIdNodePath(clientIdentity.getDestination(),
             clientIdentity.getClientId());
@@ -114,6 +117,10 @@ public class ZooKeeperMetaManager extends AbstractCanalLifeCycle implements Cana
         }
         List<Short> clientIds = new ArrayList<Short>();
         for (String child : childs) {
+            /*
+             * yzy: /otter/canal/destinations/{instance_name}除了client信息，还有running。
+             * 使用数字判断是否为client。当前一个instance只能有一个client
+             * */
             if (StringUtils.isNumeric(child)) {
                 clientIds.add(ZookeeperPathUtils.getClientId(child));
             }

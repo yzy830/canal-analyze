@@ -52,6 +52,9 @@ public class PeriodMixedMetaManager extends MemoryMetaManager implements CanalMe
         }
 
         executor = Executors.newScheduledThreadPool(1);
+        /*
+         * 覆盖基类实现，从ZK获取每个instance的客户端信息
+         * */
         destinations = MigrateMap.makeComputingMap(new Function<String, List<ClientIdentity>>() {
 
             public List<ClientIdentity> apply(String destination) {
@@ -59,6 +62,9 @@ public class PeriodMixedMetaManager extends MemoryMetaManager implements CanalMe
             }
         });
 
+        /*
+         * 覆盖了积累的实现，从ZK中获取CURSOR
+         * */
         cursors = MigrateMap.makeComputingMap(new Function<ClientIdentity, Position>() {
 
             public Position apply(ClientIdentity clientIdentity) {

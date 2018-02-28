@@ -1,0 +1,5 @@
+package com.alibaba.otter.canal.deployer;
+
+public class App {
+
+}

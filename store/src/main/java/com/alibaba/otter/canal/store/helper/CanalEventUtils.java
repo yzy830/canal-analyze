@@ -84,9 +84,13 @@ public class CanalEventUtils {
         CanalEntry.Entry entry = event.getEntry();
         boolean result = position.getTimestamp().equals(entry.getHeader().getExecuteTime());
 
+        /*
+         * 如果ACK提供的position信息没有日志文件名称和日志位点，那么则只能匹配时间；否则需要检查日志文件名称和位点
+         * */
         boolean exactely = (StringUtils.isBlank(position.getJournalName()) && position.getPosition() == null);
         if (!exactely) {// 精确匹配
             result &= StringUtils.equals(entry.getHeader().getLogfileName(), position.getJournalName());
+            // yzy: 如果只传入了日志文件名称，没有传入位点，这个地方会报NullPointerException。可以依赖客户端处理
             result &= position.getPosition().equals(entry.getHeader().getLogfileOffset());
         }
 

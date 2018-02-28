@@ -3,13 +3,21 @@ package com.alibaba.otter.canal.protocol.position;
 /**
  * 基于mysql/oracle log位置标示
  * 
+ * <p> yzy: 包括服务器标识(地址，server id)和日志位点
+ * 
  * @author jianghang 2012-6-21 上午10:52:41
  * @version 1.0.0
  */
 public class LogPosition extends Position {
 
     private static final long serialVersionUID = 3875012010277005819L;
+    /**
+     * 服务器标识
+     */
     private LogIdentity       identity;
+    /**
+     * 日志位点
+     */
     private EntryPosition     postion;
 
     public LogIdentity getIdentity() {

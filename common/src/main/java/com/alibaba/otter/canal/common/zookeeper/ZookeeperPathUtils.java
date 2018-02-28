@@ -103,14 +103,23 @@ public class ZookeeperPathUtils {
     public static final String DESTINATION_CLUSTER_NODE                     = DESTINATION_CLUSTER_ROOT
                                                                               + ZOOKEEPER_SEPARATOR + "{1}";
 
+    /**
+     * 获取Instance工作目录，/otter/canal/destinations/{instance_name}
+     */
     public static String getDestinationPath(String destinationName) {
         return MessageFormat.format(DESTINATION_NODE, destinationName);
     }
 
+    /**
+     * 获取instance客户端工作目录，otter/canal/destinations/{instance_name}/{client_id}
+     */
     public static String getClientIdNodePath(String destinationName, short clientId) {
         return MessageFormat.format(DESTINATION_CLIENTID_NODE, destinationName, String.valueOf(clientId));
     }
 
+    /**
+     * 获取instance客户端filter节点，/otter/canal/destinations/{instance_name}/{client_id}/filter
+     */
     public static String getFilterPath(String destinationName, short clientId) {
         return MessageFormat.format(DESTINATION_CLIENTID_FILTER_NODE, destinationName, String.valueOf(clientId));
     }
@@ -126,6 +135,9 @@ public class ZookeeperPathUtils {
             getBatchMarkNode(batchId));
     }
 
+    /**
+     * 获取instance客户端cursor节点，/otter/canal/destinations/{instance_name}/{client_id}/cursor
+     */
     public static String getCursorPath(String destination, short clientId) {
         return MessageFormat.format(DESTINATION_CURSOR_NODE, destination, String.valueOf(clientId));
     }

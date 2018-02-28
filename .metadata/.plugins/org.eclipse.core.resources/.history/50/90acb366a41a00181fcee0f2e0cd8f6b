@@ -1,0 +1,7 @@
+package com.alibaba.otter.canal.deployer;
+
+public class App {
+    public static void main(String[] args) {
+        System.out.println(CanalConstants.getInstanceModeKey("global"));
+    }
+}

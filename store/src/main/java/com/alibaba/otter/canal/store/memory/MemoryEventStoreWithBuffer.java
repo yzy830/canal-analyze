@@ -57,6 +57,11 @@ public class MemoryEventStoreWithBuffer extends AbstractCanalStoreScavenge imple
     private Condition         notEmpty      = lock.newCondition();
 
     private BatchMode         batchMode     = BatchMode.ITEMSIZE;           // 默认为内存大小模式
+    /**
+     * ddlIsolation的意思是隔离（而非过滤）ddl事件，即每个ddl事件单独发送个客户端。
+     * 例如有A B C D E五个事件，其中事件C是DDL事件，那么在ddlIsolation为true
+     * 时，不管客户端如何设置batchSize，一定是先获得事件A/B，然后一次get请求获得C，之后的请求才能获取D/E
+     */
     private boolean           ddlIsolation  = false;
 
     public MemoryEventStoreWithBuffer(){
@@ -483,6 +488,11 @@ public class MemoryEventStoreWithBuffer extends AbstractCanalStoreScavenge imple
     private boolean checkFreeSlotAt(final long sequence) {
         final long wrapPoint = sequence - bufferSize;
         final long minPoint = getMinimumGetOrAck();
+        /*
+         * 在队列工作过程中，putSequence、getSequence、ackSequence都是单向增加的，并且应该保持ack <= get <= put。
+         * 在这种条件下，如果buffer能写入，需要满足  put + dataSize - ack <= bufferSize，
+         * 即 put + dataSize - bufferSize <= ack
+         * */
         if (wrapPoint > minPoint) { // 刚好追上一轮
             return false;
         } else {
