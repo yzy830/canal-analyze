@@ -347,8 +347,8 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
      *   <li>
      *     从如果本地、ZK均没有。则使用用户配置，如果也没有用户配置，则使用show master status指令获取最新位点。
      *     在用户配置中，允许使用时间配置日志位点。这种情况下的处理是比较复杂的，Canal会使用show binlog event limit 1
-     *     查找第一个日志的文件名称，使用show master status获取最后一个日志的文件名称，然后消费这些日志文件中的每个事件，
-     *     获取对应的时间戳，找到一个大于指定时间戳的事件位置
+     *     查找第一个日志的文件名称，使用show master status获取最后一个日志的文件名称，然后按照从最新日志到最早日志的方式，
+     *     消费这些日志文件中的每个事件，找到一个小于指定时间戳的日志
      *   </li>
      *   <li>
      *     如果本地或者ZK有日志位点，则比较LogPosition#LogIdentity中的地址是否相同，如果不同，则mysql发生了主从切换，应该重新
@@ -440,6 +440,11 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
                         dumpErrorCount = 0;
                         return findPosition;
                     }
+                    
+                    /*
+                     * yzy: 这里没有处理CASE1，即binlog retention过程已经把日志位点删除了。这个时候，应该从最老的日志位点开始处理，并给一个
+                     *      报警给客户端。
+                     * */
                 }
                 // 其余情况
                 logger.warn("prepare to find start position just last position\n {}",
@@ -543,7 +548,11 @@ public class MysqlEventParser extends AbstractMysqlEventParser implements CanalE
      * <p>
      *   yzy: 使用show master status获取最后一个日志文件的名称，使用show binlog events limit 1获取第一个日志文件
      *        的名称。从最后一个日志文件开始查找，遇到一个小于指定时间点的日志位置，则退出。
-     * </p>
+     *        
+     *  <p>
+     *   yzy: 如果所有日志时间点均晚于指定时间，则返回NULL。因此，如果CANAL记录了一个较早时间点的日志位置，则可能因为MYSQL删除了
+     *        BINLOG，导致始终无法找到日志位点。这里CANAL应该再做一个处理，如果找不到指定时间的位点，从最早的日志文件开始，并且给一个
+     *        ALARM
      * 
      * @param mysqlConnection
      * @param startTimestamp
