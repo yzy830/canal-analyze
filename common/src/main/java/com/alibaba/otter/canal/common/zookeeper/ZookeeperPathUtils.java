@@ -124,6 +124,9 @@ public class ZookeeperPathUtils {
         return MessageFormat.format(DESTINATION_CLIENTID_FILTER_NODE, destinationName, String.valueOf(clientId));
     }
 
+    /**
+     * 获取batch工作目录，/otter/canal/destinations/{destination}/{client_id}/mark
+     */
     public static String getBatchMarkPath(String destinationName, short clientId) {
         return MessageFormat.format(DESTINATION_CLIENTID_BATCH_MARK_NODE, destinationName, String.valueOf(clientId));
     }
