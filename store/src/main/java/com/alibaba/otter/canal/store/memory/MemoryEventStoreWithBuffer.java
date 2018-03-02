@@ -424,6 +424,9 @@ public class MemoryEventStoreWithBuffer extends AbstractCanalStoreScavenge imple
                         ackMemSize.addAndGet(memsize);
                         // 尝试清空buffer中的内存，将ack之前的内存全部释放掉
                         for (long index = sequence + 1; index < next; index++) {
+                            /*
+                             * yzy: 这个循环应该放在外面，无论是MEMSIZE还是ITEMSIZE，都应该设置为NULL
+                             * */
                             entries[getIndex(index)] = null;// 设置为null
                         }
                     }

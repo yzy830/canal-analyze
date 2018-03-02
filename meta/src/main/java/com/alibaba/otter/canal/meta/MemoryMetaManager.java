@@ -135,6 +135,11 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
     public static class MemoryClientIdentityBatch {
 
         private ClientIdentity           clientIdentity;
+        /**
+         * 记录batch id和每一个batch的日志范围：开始位点、结束位点、ACK位点。每次ACK都是batch中，最后一个事务开始事件、事务结束时间或者一个DDL事件
+         * 
+         * 如果不存在这些事件，ACK为NULL
+         */
         private Map<Long, PositionRange> batches          = new MapMaker().makeMap();
         private AtomicLong               atomicMaxBatchId = new AtomicLong(1);
 
@@ -156,6 +161,9 @@ public class MemoryMetaManager extends AbstractCanalLifeCycle implements CanalMe
         }
 
         public synchronized Long addPositionRange(PositionRange positionRange) {
+            /*
+             * batchId自增生成，本生与batch数据无关，这里通过map来映射
+             * */
             Long batchId = atomicMaxBatchId.getAndIncrement();
             batches.put(batchId, positionRange);
             return batchId;

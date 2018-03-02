@@ -295,6 +295,10 @@ public class ZooKeeperMetaManager extends AbstractCanalLifeCycle implements Cana
         }
     }
 
+    /*
+     * 这里尝试去ZK拉取batchs记录，但是流程上并未创建/otter/canal/destinations/{destination}/{client_id}/mark。从
+     * 实际运行来看，也没有，因此这一步得到的应该是一个空的MAP
+     * */
     public Map<Long, PositionRange> listAllBatchs(ClientIdentity clientIdentity) {
         String path = ZookeeperPathUtils.getBatchMarkPath(clientIdentity.getDestination(), clientIdentity.getClientId());
         List<String> nodes = null;

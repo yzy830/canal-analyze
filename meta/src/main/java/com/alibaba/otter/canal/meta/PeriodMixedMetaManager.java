@@ -77,11 +77,15 @@ public class PeriodMixedMetaManager extends MemoryMetaManager implements CanalMe
             }
         });
 
+        /*
+         * 从这个看，一个Client的初始batch信息是空的
+         * */
         batches = MigrateMap.makeComputingMap(new Function<ClientIdentity, MemoryClientIdentityBatch>() {
 
             public MemoryClientIdentityBatch apply(ClientIdentity clientIdentity) {
                 // 读取一下zookeeper信息，初始化一次
                 MemoryClientIdentityBatch batches = MemoryClientIdentityBatch.create(clientIdentity);
+                //
                 Map<Long, PositionRange> positionRanges = zooKeeperMetaManager.listAllBatchs(clientIdentity);
                 for (Map.Entry<Long, PositionRange> entry : positionRanges.entrySet()) {
                     batches.addPositionRange(entry.getValue(), entry.getKey()); // 添加记录到指定batchId
@@ -96,6 +100,10 @@ public class PeriodMixedMetaManager extends MemoryMetaManager implements CanalMe
         executor.scheduleAtFixedRate(new Runnable() {
 
             public void run() {
+                /* 
+                 * 这里不存在并发问题。因为ArrayList在拷贝之前，调用了Collection#toArray。synchronizedSet的toArray
+                 * 方法是做了同步处理的 
+                 * */
                 List<ClientIdentity> tasks = new ArrayList<ClientIdentity>(updateCursorTasks);
                 for (ClientIdentity clientIdentity : tasks) {
                     try {

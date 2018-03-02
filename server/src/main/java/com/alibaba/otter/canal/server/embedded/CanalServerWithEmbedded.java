@@ -278,12 +278,20 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
      */
     @Override
     public Message getWithoutAck(ClientIdentity clientIdentity, int batchSize, Long timeout, TimeUnit unit)
-                                                                                                           throws CanalServerException {
+            throws CanalServerException {
         checkStart(clientIdentity.getDestination());
         checkSubscribe(clientIdentity);
 
         CanalInstance canalInstance = canalInstances.get(clientIdentity.getDestination());
         synchronized (canalInstance) {
+            /*
+             * yzy: 这一段复杂的处理，其实没有必要。
+             * 
+             * 从当前get来看，总是从getSequence开始拉取，其中getSequence表示最后一次读取的下标。内部处理只有两种情况，是从getSequence + 1开始
+             * 读取还是从getSequence开始读取。
+             * 
+             * 因此跟batch、cursor本身没什么关系
+             * */            
             // 获取到流式数据中的最后一批获取的位置
             PositionRange<LogPosition> positionRanges = canalInstance.getMetaManager().getLastestBatch(clientIdentity);
 
@@ -341,6 +349,16 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
 
     /**
      * 进行 batch id 的确认。确认之后，小于等于此 batchId 的 Message 都会被确认。
+     * 
+     * <p> 
+     * yzy: ack流程分了三步
+     * <ol>
+     *  <li> 删除batchId对应的batch。这一步删除的会验证batchId是否是当前MetaManager中最小的。CANAL要求按照顺序ACK。
+     *       从应用看，完全没有必要，应该是提交一个batchId之后，将小于等于此batchId的Message全部提交，类似于kafka，
+     *       可以减少客户端的网络请求
+     *  <li> 使用batchId对应的ack position，更新cursor的位置。如果Server出现故障切换，那么会从ack位置开来拉取(有可能会倒退一定时间)
+     *  <li> ack EventStore，ack位置移至end。因此，如果Server不切换，就算rollback了，日志也不会重复。
+     * </ol>
      * 
      * <pre>
      * 注意：进行反馈时必须按照batchId的顺序进行ack(需有客户端保证)
@@ -415,6 +433,27 @@ public class CanalServerWithEmbedded extends AbstractCanalLifeCycle implements C
 
     /**
      * 回滚到未进行 {@link #ack} 的地方，下次fetch的时候，可以从最后一个没有 {@link #ack} 的地方开始拿
+     * 
+     * <p>
+     *   对EventStore来说，rollback(clientIdentity)与rollback(clientIdentity, batchId)作用是一样的，都是将
+     *   get位置回滚到ack的位置。
+     * </p>
+     * 
+     * <p>
+     *   两个的区别在于，rollback(clientIdentity)会清空batchs，而rollback(clientIdentity, batchId)只会删除指定的
+     *   batch。
+     * <p>
+     * 
+     * <p>
+     *   如果使用了rollabck。batchs中剩余的batch还可以被ACK，因此可能导致rollback batch在第二次从新拉取并且处理错误的时候，
+     *   就无法再通过rollabck来重新拉取(因为ack的位置已经迁移)。因此最好的方式是使用rollback(clientIdentity)，而非
+     *   rollback(clientIdentity, batchId)，可以防止编程错误带来的数据丢失
+     * </p>
+     * 
+     * <p>
+     *   使用rollback(clientIdentity)还有一个好处是，使得后续的ack自动无效，直到遇到在rollback完成之后从get获取的batch，
+     *   才又重新执行ack。这样客户端可以在拉取和ack线程，在纯异步且无序额外同步操作的情况下，完成流式操作。待严重
+     * </p>
      */
     @Override
     public void rollback(ClientIdentity clientIdentity, Long batchId) throws CanalServerException {

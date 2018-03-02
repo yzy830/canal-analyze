@@ -12,6 +12,8 @@ import com.alibaba.otter.canal.protocol.position.PositionRange;
 /**
  * 代表一组数据对象的集合
  * 
+ * <p> yzy：表示一组事件和对应的日志位点范围。日志位点范围用于ACK
+ * 
  * @author jianghang 2012-6-14 下午09:07:41
  * @version 1.0.0
  */
